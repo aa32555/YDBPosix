@@ -56,7 +56,14 @@ YottaDB must be installed and available before installing the POSIX plugin. http
 Testing
 -------
 
-The expected output of :code:`yottadb -run %ydbposixtest` is as below; manually verify whether the statement about Daylight Savings Time is correct.
+Testing the POSIX plugin will need an environment to be created. This can be done with the following commands:
+
+.. code-block:: bash
+
+   export ydb_dir=`mktemp -d`
+   source $(pkg-config --variable=prefix yottadb)/ydb_env_set
+   
+Once the environment has been set up :code:`yottadb -run %ydbposixtest` can be executed to test the POSIX plugin installation. The expected output of :code:`yottadb -run %ydbposixtest` is as below; manually verify whether the statement about Daylight Savings Time is correct.
 
 .. code-block:: none
 		
