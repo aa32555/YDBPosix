@@ -3,7 +3,7 @@
 ; Copyright (c) 2012-2015 Fidelity National Information		;
 ; Services, Inc. and/or its subsidiaries. All rights reserved.	;
 ;								;
-; Copyright (c) 2018-2020 YottaDB LLC and/or its subsidiaries.	;
+; Copyright (c) 2018-2021 YottaDB LLC and/or its subsidiaries.	;
 ; All rights reserved.						;
 ;								;
 ;	This source code contains the intellectual property	;
@@ -113,13 +113,10 @@ realpath(name,realpath)
 	quit:$quit 1 quit
 
 ; Discard a previously compiled regular expression - *must* be passed by variable name
+; NO-OP right now, as freeing moved to REGMATCH
 REGFREE(pregstr)
-	new retval
-	set retval=$$regfree(pregstr)
-	quit:$quit retval quit
+	quit:$quit 1 quit
 regfree(pregstr)
-	if $&ydbposix.regfree(@pregstr)
-	zkill @pregstr
 	quit:$quit 1 quit
 
 ; Match a regular expression
@@ -128,15 +125,14 @@ REGMATCH(str,patt,pattflags,matchflags,matchresults,maxresults)
 	set retval=$$regmatch($get(str),$get(patt),$get(pattflags),$get(matchflags),.matchresults,$get(maxresults))
 	quit:$quit retval quit
 regmatch(str,patt,pattflags,matchflags,matchresults,maxresults)
-	new errno,i,j,mfval,matchsuccess,nextmf,nextpf,nextrmeo,nextrmso,pfval,pregstr,regmatchtsize,regofftsize,resultbuf
+	new errno,i,j,mfval,matchsuccess,nextmf,nextpf,nextrmeo,nextrmso,pfval,pregstr,regmatchtsize,regofftsize,resultbuf,%ydbposix
 	if $length($get(pattflags)) for i=1:1:$length(pattflags,"+") do
 	. set nextpf=$piece(pattflags,"+",i)
 	. if $increment(pfval,$select(nextpf'=+nextpf:$$regsymval(nextpf),1:nextpf))
 	else  set pfval=0
-	do:'$data(%ydbposix("regmatch",patt,pfval))
-	. do:'$&ydbposix.regcomp(.pregstr,patt,pfval,.errno)
-	. . zkill %ydbposix("regcomp","errno")
-	. . set %ydbposix("regmatch",patt,pfval)=pregstr
+	do:'$&ydbposix.regcomp(.pregstr,patt,pfval,.errno)
+	. zkill %ydbposix("regcomp","errno")
+	. set %ydbposix("regmatch",patt,pfval)=pregstr
 	; nothing matched and that is due to an error in regcomp
 	if '$data(%ydbposix("regmatch",patt,pfval)) quit:$quit -errno_",regcomp" quit
 	set:'$data(maxresults) maxresults=1
@@ -160,6 +156,8 @@ regmatch(str,patt,pattflags,matchflags,matchresults,maxresults)
 	. . . set matchresults(i,"start")=1+nextrmso
 	. . . set matchresults(i,"end")=1+nextrmeo
 	. . ; Because the `do` code above is always executed, `matchresults(i)` is guaranteed to be set at this point.
+	; Free memory
+	if $&ydbposix.regfree(%ydbposix("regmatch",patt,pfval))
 	quit:$quit i quit
 
 ; Get numeric value for regular expression symbolic constant - only lower case because this is an internal utility routine
